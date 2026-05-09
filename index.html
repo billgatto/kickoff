@@ -1572,6 +1572,34 @@ function ProfileScreen() {
     setIsEditing(false);
   };
 
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kickoff_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (re) => {
+      try {
+        const imported = JSON.parse(re.target.result);
+        if (confirm("ATTENZIONE: Importando i dati, sovrascriverai completamente quelli attuali su questo dispositivo. Vuoi procedere?")) {
+          setData(imported);
+          alert("Dati importati con successo!");
+        }
+      } catch (err) {
+        alert("Errore: il file selezionato non è un backup valido di Kickoff.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <Screen>
       <div style={{ padding: '56px 20px 20px' }}>
@@ -1662,7 +1690,7 @@ function ProfileScreen() {
 
         {/* Trofei */}
         <div style={{ fontWeight: 700, fontSize: 14, color: T.sub, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Trofei</div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
           {[
             { icon: '🥇', label: 'Capocannoniere' },
             { icon: '🏆', label: '10+ Vittorie' },
@@ -1674,6 +1702,19 @@ function ProfileScreen() {
             </Card>
           ))}
         </div>
+
+        {/* Sync & Backup */}
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.sub, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Backup & Sincronizzazione</div>
+        <Card style={{ border: `1px solid ${T.accent}30`, background: T.accentDim }}>
+          <div style={{ color: T.sub, fontSize: 12, marginBottom: 16 }}>Esporta i dati su un file per trasferirli su un altro dispositivo o conservare una copia di sicurezza.</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Btn small full label="Esporta Backup" icon="📤" onClick={exportData} />
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input type="file" accept=".json" onChange={importData} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} title="Importa Backup" />
+              <Btn small full secondary label="Importa Backup" icon="📥" />
+            </div>
+          </div>
+        </Card>
       </div>
     </Screen>
   );
