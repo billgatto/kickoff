@@ -1539,6 +1539,47 @@ function MatchResultScreen({ match, groupId }) {
           </div>
         </div>
 
+        {/* Compact Timeline */}
+        <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: '16px 12px', border: `1px solid ${T.border}` }}>
+          <div style={{ color: T.sub, fontWeight: 900, fontSize: 10, marginBottom: 14, textAlign: 'center', letterSpacing: 2, opacity: 0.8 }}>TABELLINO CRONOLOGICO</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            {/* Team A Goals */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {match.goals.filter(g => g.team === 'A').map((g, i) => {
+                const p = match.players.find(x => x.id === g.playerId);
+                const ast = match.players.find(x => x.id === g.assistantId);
+                return (
+                  <div key={i} style={{ fontSize: 11, color: T.teamA, display: 'flex', gap: 5, alignItems: 'center' }}>
+                    <span style={{ fontWeight: 900, minWidth: 22 }}>{g.minute}'</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700 }}>{shortName(p?.name).toUpperCase()}</span>
+                      {ast && <span style={{ opacity: 0.6, fontSize: 9, marginTop: -2 }}>👟 {shortName(ast.name)}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {match.goals.filter(g => g.team === 'A').length === 0 && <div style={{ fontSize: 10, color: T.muted, textAlign: 'center' }}>-</div>}
+            </div>
+            {/* Team B Goals */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+              {match.goals.filter(g => g.team === 'B').map((g, i) => {
+                const p = match.players.find(x => x.id === g.playerId);
+                const ast = match.players.find(x => x.id === g.assistantId);
+                return (
+                  <div key={i} style={{ fontSize: 11, color: T.teamB, display: 'flex', gap: 5, alignItems: 'center', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 700 }}>{shortName(p?.name).toUpperCase()}</span>
+                      {ast && <span style={{ opacity: 0.6, fontSize: 9, marginTop: -2 }}>{shortName(ast.name)} 👟</span>}
+                    </div>
+                    <span style={{ fontWeight: 900, minWidth: 22 }}>{g.minute}'</span>
+                  </div>
+                );
+              })}
+              {match.goals.filter(g => g.team === 'B').length === 0 && <div style={{ fontSize: 10, color: T.muted, textAlign: 'center' }}>-</div>}
+            </div>
+          </div>
+        </div>
+
         <div style={{ marginTop: 'auto', textAlign: 'center', opacity: 0.5 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>POWERED BY KICKOFF • CALCETTO PRO</div>
         </div>
