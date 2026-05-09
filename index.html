@@ -96,6 +96,7 @@ const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60
 const initials = n => n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
 const shuffle = a => [...a].sort(() => Math.random() - 0.5);
 const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }); };
+const shortName = n => { if(!n) return ''; const p = n.split(' '); return p[0] + (p[1] ? ' ' + p[1][0] + '.' : ''); };
 
 // ── DATA ───────────────────────────────────────────────────────────────────
 const PLAYERS_POOL = [];
@@ -186,7 +187,7 @@ function HomeScreen() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
           <div>
             <div style={{ color: T.sub, fontSize: 13, marginBottom: 4 }}>Ciao,</div>
-            <div style={{ fontWeight: 800, fontSize: 26 }}>{data.user.name.split(' ')[0]} 👋</div>
+            <div style={{ fontWeight: 800, fontSize: 26 }}>{shortName(data.user.name)} 👋</div>
           </div>
           <Avatar name={data.user.name} size={44} />
         </div>
@@ -526,7 +527,7 @@ function GroupDetailScreen({ groupId }) {
                       <span style={{ width: 28, color: i < 3 ? T.warn : T.sub, fontWeight: 800, fontSize: 13 }}>{i+1}</span>
                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar name={p.name} size={28} />
-                        <span style={{ fontWeight: 600, fontSize: 14 }}>{p.name.split(' ')[0]} {p.name.split(' ')[1]?.charAt(0)}.</span>
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{shortName(p.name)}</span>
                       </div>
                       <span style={{ width: 35, textAlign: 'center', fontSize: 13, color: T.sub }}>{p.calcMatches}</span>
                       <span style={{ width: 35, textAlign: 'center', fontSize: 14, fontWeight: 800, color: T.accent }}>{p.calcGoals}</span>
@@ -795,7 +796,7 @@ function CreateMatchScreen({ groupId, matchToEdit = null }) {
                     {unassigned.map(p => (
                       <div key={p.id} style={{ display: 'flex', gap: 4 }}>
                         <button onClick={() => moveToTeam(p, 'A')} style={{ background: T.teamA + '33', color: T.teamA, borderRadius: 20, padding: '6px 10px', fontSize: 12, fontWeight: 600 }}>A</button>
-                        <button style={{ background: T.card, borderRadius: 20, padding: '6px 10px', fontSize: 12, color: T.text, border: `1px solid ${T.border}` }}>{p.name.split(' ')[0]}</button>
+                        <button style={{ background: T.card, borderRadius: 20, padding: '6px 10px', fontSize: 12, color: T.text, border: `1px solid ${T.border}` }}>{shortName(p.name)}</button>
                         <button onClick={() => moveToTeam(p, 'B')} style={{ background: T.teamB + '33', color: T.teamB, borderRadius: 20, padding: '6px 10px', fontSize: 12, fontWeight: 600 }}>B</button>
                       </div>
                     ))}
@@ -823,7 +824,7 @@ function CreateMatchScreen({ groupId, matchToEdit = null }) {
                           transition: 'all .15s',
                         }}>
                         <span style={{ fontSize: 13, fontWeight: isSelected ? 700 : 400, color: isSelected ? color : T.text }}>
-                          {isSelected ? '→ ' : ''}{p.name.split(' ')[0]}
+                          {isSelected ? '→ ' : ''}{shortName(p.name)}
                         </span>
                         <button
                           onClick={e => { e.stopPropagation(); setTeamA(ta => ta.filter(x => x.id !== p.id)); setTeamB(tb => tb.filter(x => x.id !== p.id)); setSwapSelection(null); }}
@@ -958,7 +959,7 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{p?.name || 'Sconosciuto'}</div>
                       {g.assistantId && (
-                        <div style={{ fontSize: 11, color: T.sub }}>Ast: {match.players.find(pl => pl.id === g.assistantId)?.name.split(' ')[0]}</div>
+                        <div style={{ fontSize: 11, color: T.sub }}>Ast: {shortName(match.players.find(pl => pl.id === g.assistantId)?.name)}</div>
                       )}
                     </div>
                     <Pill label={`Sqd ${g.team}`} color={g.team === 'A' ? T.teamA : T.teamB} />
@@ -1003,7 +1004,7 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
                   <div style={{ color, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{label}</div>
                   {team.map(p => (
                     <div key={p.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>{p.name.split(' ')[0]}</span>
+                      <span>{shortName(p.name)}</span>
                       {scorers[p.id] && <span style={{ color: T.accent, fontSize: 11 }}>⚽×{scorers[p.id]}</span>}
                     </div>
                   ))}
@@ -1365,8 +1366,8 @@ function LiveScreen({ match: initialMatch, groupId }) {
                     <span style={{ color: T.sub, fontSize: 12, width: 28 }}>{g.minute}'</span>
                     <span style={{ fontSize: 14 }}>⚽</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{p?.name}</div>
-                      {ast && <div style={{ fontSize: 10, color: T.sub }}>Assist: {ast.name.split(' ')[0]}</div>}
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{shortName(p?.name)}</div>
+                      {ast && <div style={{ fontSize: 10, color: T.sub }}>Assist: {shortName(ast.name)}</div>}
                     </div>
                     <Pill label={`Sqd ${g.team}`} color={g.team === 'A' ? T.teamA : T.teamB} />
                   </div>
@@ -1513,7 +1514,7 @@ function MatchResultScreen({ match, groupId }) {
                 const p = match.players.find(x => x.id === parseInt(pid));
                 return (
                   <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
-                    <span style={{ color: '#fff' }}>{p?.name.split(' ')[0].toUpperCase()}</span>
+                    <span style={{ color: '#fff' }}>{shortName(p?.name).toUpperCase()}</span>
                     <span style={{ color: T.accent }}>{count}</span>
                   </div>
                 );
@@ -1528,7 +1529,7 @@ function MatchResultScreen({ match, groupId }) {
                 const p = match.players.find(x => x.id === parseInt(pid));
                 return (
                   <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
-                    <span style={{ color: '#fff' }}>{p?.name.split(' ')[0].toUpperCase()}</span>
+                    <span style={{ color: '#fff' }}>{shortName(p?.name).toUpperCase()}</span>
                     <span style={{ color: T.warn }}>{count}</span>
                   </div>
                 );
