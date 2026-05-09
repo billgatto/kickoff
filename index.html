@@ -1366,7 +1366,7 @@ function ProfileScreen() {
             <div style={{ fontWeight: 800, fontSize: 22, marginTop: 12 }}>{data.user.name}</div>
           )}
           
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button onClick={() => setData(prev => ({ ...prev, user: { ...prev.user, role: prev.user.role === 'admin' ? 'player' : 'admin' } }))}
               style={{
                 background: data.user.role === 'admin' ? T.accentDim : T.card,
@@ -1374,7 +1374,15 @@ function ProfileScreen() {
                 border: `1px solid ${data.user.role === 'admin' ? T.accent : T.border}`,
                 borderRadius: 20, padding: '6px 16px', fontWeight: 700, fontSize: 13,
               }}>
-              {data.user.role === 'admin' ? '⚙️ Admin' : '👤 Giocatore'} · Switch ruolo
+              {data.user.role === 'admin' ? '⚙️ Admin' : '👤 Giocatore'}
+            </button>
+            <button onClick={() => {
+              if(confirm("Sei sicuro? Questo cancellerà TUTTI i dati dell'app (gruppi, partite, giocatori) e non potrai tornare indietro.")) {
+                localStorage.removeItem('kickoff_data');
+                window.location.reload();
+              }
+            }} style={{ background: T.danger + '22', color: T.danger, border: `1px solid ${T.danger}40`, borderRadius: 20, padding: '6px 12px', fontSize: 13, fontWeight: 700 }}>
+              🗑 Reset
             </button>
           </div>
         </div>
