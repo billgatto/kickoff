@@ -1,0 +1,7 @@
+services:
+  kickoff:
+    build: .
+    container_name: kickoff-app
+    ports:
+      - "8080:80"
+    restart: unless-stopped
