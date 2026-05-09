@@ -904,12 +904,25 @@ function ConvocazioniScreen() {
 
 // ── MATCH DETAIL SCREEN ───────────────────────────────────────────────────
 function MatchDetailScreen({ match: initialMatch, groupId }) {
-  const { data, push } = useApp();
+  const { data, setData, push, pop } = useApp();
   const match = useMemo(() => {
     if (!groupId) return initialMatch;
     const g = data.groups.find(g => g.id === groupId);
     return g?.matches.find(m => m.id === initialMatch.id) || initialMatch;
   }, [data, groupId, initialMatch]);
+
+  const deleteMatch = () => {
+    if (confirm("Sei sicuro di voler eliminare definitivamente questa partita? Questa operazione non può essere annullata.")) {
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === groupId ? {
+          ...g,
+          matches: g.matches.filter(m => m.id !== match.id)
+        } : g)
+      }));
+      pop();
+    }
+  };
 
   const scorers = {};
   match.goals.forEach(g => { scorers[g.playerId] = (scorers[g.playerId] || 0) + 1; });
@@ -925,6 +938,7 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
           {match.status !== 'finished' && (
             <button onClick={() => push('live', { match, groupId })} style={{ background: T.danger, color: '#fff', borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>🔴 Live</button>
           )}
+          <button onClick={deleteMatch} style={{ background: T.danger + '22', color: T.danger, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>🗑</button>
         </div>
       } />
       <div style={{ padding: 20 }}>
