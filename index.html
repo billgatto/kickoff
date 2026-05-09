@@ -340,21 +340,44 @@ function GroupDetailScreen({ groupId }) {
   const group = data.groups.find(g => g.id === groupId);
   const [tab, setTab] = useState('partite');
   const [showAddPlayer, setShowAddPlayer] = useState(false);
-  const [newPlayerName, setNewPlayerName] = useState('');
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [newPlayer, setNewPlayer] = useState({ name: '', phone: '', role: 'Tuttocampista' });
 
   if (!group) return null;
   const upcoming = group.matches.filter(m => m.status === 'upcoming' || m.status === 'live');
   const finished = group.matches.filter(m => m.status === 'finished');
 
-  const addPlayer = () => {
-    if (!newPlayerName.trim()) return;
-    const player = { id: Date.now(), name: newPlayerName.trim(), goals: 0, matches: 0, wins: 0 };
-    setData(prev => ({
-      ...prev,
-      groups: prev.groups.map(g => g.id === groupId ? { ...g, players: [...g.players, player] } : g)
-    }));
-    setNewPlayerName('');
+  const ROLES = ['Portiere', 'Difensore', 'Centrocampista', 'Attaccante', 'Tuttocampista'];
+
+  const savePlayer = () => {
+    if (!newPlayer.name.trim()) return;
+    if (editingPlayer) {
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === groupId ? {
+          ...g,
+          players: g.players.map(p => p.id === editingPlayer.id ? { ...p, ...newPlayer } : p)
+        } : g)
+      }));
+    } else {
+      const player = { id: Date.now(), ...newPlayer, goals: 0, matches: 0, wins: 0 };
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === groupId ? { ...g, players: [...g.players, player] } : g)
+      }));
+    }
+    setNewPlayer({ name: '', phone: '', role: 'Tuttocampista' });
     setShowAddPlayer(false);
+    setEditingPlayer(null);
+  };
+
+  const deletePlayer = (id) => {
+    if (confirm("Sei sicuro di voler eliminare questo giocatore?")) {
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === groupId ? { ...g, players: g.players.filter(p => p.id !== id) } : g)
+      }));
+    }
   };
 
   return (
@@ -426,18 +449,20 @@ function GroupDetailScreen({ groupId }) {
                   <div>Nessun giocatore. Aggiungine uno!</div>
                 </div>
               )}
-              {[...group.players].sort((a, b) => b.goals - a.goals).map((p, i) => (
-                <Card key={p.id}>
+              {[...group.players].sort((a, b) => a.name.localeCompare(b.name)).map((p, i) => (
+                <Card key={p.id} style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ color: T.sub, fontSize: 13, width: 20, textAlign: 'center' }}>{i + 1}</span>
-                    <Avatar name={p.name} size={38} />
+                    <Avatar name={p.name} size={42} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
-                      <div style={{ color: T.sub, fontSize: 12 }}>{p.matches} partite · {p.wins} vittorie</div>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>{p.name}</div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 2, alignItems: 'center' }}>
+                        <Pill label={p.role || 'Tuttocampista'} color={T.accent} />
+                        {p.phone && <span style={{ color: T.sub, fontSize: 11 }}>📞 {p.phone}</span>}
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, fontSize: 18, color: T.accent }}>{p.goals}</div>
-                      <div style={{ color: T.sub, fontSize: 10 }}>gol</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => { setEditingPlayer(p); setNewPlayer({ name: p.name, phone: p.phone || '', role: p.role || 'Tuttocampista' }); setShowAddPlayer(true); }} style={{ color: T.sub, fontSize: 18 }}>✎</button>
+                      <button onClick={() => deletePlayer(p.id)} style={{ color: T.danger, fontSize: 18 }}>🗑</button>
                     </div>
                   </div>
                 </Card>
@@ -494,27 +519,53 @@ function GroupDetailScreen({ groupId }) {
         )}
       </div>
 
-      {/* Modal aggiungi giocatore */}
       {showAddPlayer && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', display: 'flex',
           alignItems: 'flex-end', zIndex: 100, backdropFilter: 'blur(4px)',
-        }} onClick={() => setShowAddPlayer(false)}>
+        }} onClick={() => { setShowAddPlayer(false); setEditingPlayer(null); setNewPlayer({ name: '', phone: '', role: 'Tuttocampista' }); }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: T.surf, borderRadius: '20px 20px 0 0', padding: 24, width: '100%',
           }}>
-            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 16 }}>Nuovo Giocatore</div>
-            <input
-              value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addPlayer()}
-              placeholder="Nome e cognome..."
-              autoFocus
-              style={{
-                width: '100%', background: T.card, border: `1px solid ${T.border}`,
-                borderRadius: 12, padding: '12px 16px', color: T.text, fontSize: 15,
-                marginBottom: 16, outline: 'none',
-              }} />
-            <Btn full label="Aggiungi" onClick={addPlayer} />
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 16 }}>{editingPlayer ? 'Modifica Giocatore' : 'Nuovo Giocatore'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <div style={{ color: T.sub, fontSize: 11, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase' }}>Nome e Cognome</div>
+                <input
+                  value={newPlayer.name} onChange={e => setNewPlayer(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome e cognome..."
+                  autoFocus
+                  style={{
+                    width: '100%', background: T.card, border: `1px solid ${T.border}`,
+                    borderRadius: 12, padding: '12px 16px', color: T.text, fontSize: 15, outline: 'none',
+                  }} />
+              </div>
+              <div>
+                <div style={{ color: T.sub, fontSize: 11, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase' }}>Numero di Telefono</div>
+                <input
+                  value={newPlayer.phone} onChange={e => setNewPlayer(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="333 1234567..."
+                  type="tel"
+                  style={{
+                    width: '100%', background: T.card, border: `1px solid ${T.border}`,
+                    borderRadius: 12, padding: '12px 16px', color: T.text, fontSize: 15, outline: 'none',
+                  }} />
+              </div>
+              <div>
+                <div style={{ color: T.sub, fontSize: 11, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase' }}>Ruolo</div>
+                <select
+                  value={newPlayer.role} onChange={e => setNewPlayer(prev => ({ ...prev, role: e.target.value }))}
+                  style={{
+                    width: '100%', background: T.card, border: `1px solid ${T.border}`,
+                    borderRadius: 12, padding: '12px 16px', color: T.text, fontSize: 15, outline: 'none',
+                    appearance: 'none',
+                  }}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <Btn full label={editingPlayer ? "Salva Modifiche" : "Aggiungi"} onClick={savePlayer} />
+              {editingPlayer && <Btn full secondary label="Annulla" onClick={() => { setShowAddPlayer(false); setEditingPlayer(null); }} />}
+            </div>
           </div>
         </div>
       )}
@@ -523,14 +574,28 @@ function GroupDetailScreen({ groupId }) {
 }
 
 // ── CREATE MATCH ──────────────────────────────────────────────────────────
-function CreateMatchScreen({ groupId }) {
+function CreateMatchScreen({ groupId, matchToEdit = null }) {
   const { data, setData, pop, push } = useApp();
   const group = data.groups.find(g => g.id === groupId);
   const [step, setStep] = useState(1); // 1=info, 2=players, 3=teams
-  const [info, setInfo] = useState({ date: '', time: '21:00', location: '', duration: '60' });
-  const [selected, setSelected] = useState({});
-  const [teamA, setTeamA] = useState([]);
-  const [teamB, setTeamB] = useState([]);
+  const [info, setInfo] = useState(matchToEdit ? {
+    date: matchToEdit.date,
+    time: matchToEdit.time,
+    location: matchToEdit.location,
+    duration: String(matchToEdit.duration || 60)
+  } : { date: '', time: '21:00', location: '', duration: '60' });
+
+  const [selected, setSelected] = useState(() => {
+    if (matchToEdit) {
+      const s = {};
+      matchToEdit.players.forEach(p => { s[p.id] = true; });
+      return s;
+    }
+    return {};
+  });
+
+  const [teamA, setTeamA] = useState(matchToEdit ? matchToEdit.teamA : []);
+  const [teamB, setTeamB] = useState(matchToEdit ? matchToEdit.teamB : []);
   const [swapSelection, setSwapSelection] = useState(null); // { player, team }
 
   const presentPlayers = group.players.filter(p => selected[p.id]);
@@ -576,22 +641,38 @@ function CreateMatchScreen({ groupId }) {
   };
 
   const save = () => {
-    const newMatch = {
-      id: Date.now(), ...info, duration: parseInt(info.duration),
-      status: 'upcoming',
+    const matchData = {
+      ...info, duration: parseInt(info.duration),
       players: group.players.filter(p => selected[p.id]).map(p => ({ ...p, presence: 'present' })),
-      teamA, teamB, goals: [], scoreA: 0, scoreB: 0,
+      teamA, teamB,
     };
-    setData(prev => ({
-      ...prev,
-      groups: prev.groups.map(g => g.id === groupId ? { ...g, matches: [...g.matches, newMatch] } : g)
-    }));
-    pop(); pop();
+
+    if (matchToEdit) {
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === groupId ? {
+          ...g,
+          matches: g.matches.map(m => m.id === matchToEdit.id ? { ...m, ...matchData } : m)
+        } : g)
+      }));
+      pop();
+    } else {
+      const newMatch = {
+        id: Date.now(), ...matchData,
+        status: 'upcoming',
+        goals: [], scoreA: 0, scoreB: 0,
+      };
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === groupId ? { ...g, matches: [...g.matches, newMatch] } : g)
+      }));
+      pop(); pop();
+    }
   };
 
   return (
     <Screen>
-      <Header title={step === 1 ? 'Nuova Partita' : step === 2 ? 'Giocatori' : 'Squadre'} back />
+      <Header title={matchToEdit ? (step === 1 ? 'Modifica Partita' : step === 2 ? 'Modifica Giocatori' : 'Modifica Squadre') : (step === 1 ? 'Nuova Partita' : step === 2 ? 'Giocatori' : 'Squadre')} back />
       <div style={{ padding: 20 }}>
         {/* Step indicator */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
@@ -811,12 +892,16 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
   match.goals.forEach(g => { scorers[g.playerId] = (scorers[g.playerId] || 0) + 1; });
 
   return (
-    <Screen>
-          ? <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => push('share', { match: { ...match, groupName: data.groups.find(g => g.id === groupId)?.name || 'Match' } })} style={{ background: T.border, color: T.text, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>📤</button>
-                <button onClick={() => push('live', { match, groupId })} style={{ background: T.danger, color: '#fff', borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>🔴 Live</button>
-              </div>
-          : <button onClick={() => push('share', { match: { ...match, groupName: data.groups.find(g => g.id === groupId)?.name || 'Match' } })} style={{ background: T.border, color: T.text, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>📤 Condividi</button>
+      <Header title="Dettaglio Partita" back action={
+        <div style={{ display: 'flex', gap: 8 }}>
+          {match.status !== 'finished' && (
+            <button onClick={() => push('createMatch', { groupId, matchToEdit: match })} style={{ background: T.warn + '22', color: T.warn, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>✎ Modifica</button>
+          )}
+          <button onClick={() => push('share', { match: { ...match, groupName: data.groups.find(g => g.id === groupId)?.name || 'Match' } })} style={{ background: T.border, color: T.text, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>📤</button>
+          {match.status !== 'finished' && (
+            <button onClick={() => push('live', { match, groupId })} style={{ background: T.danger, color: '#fff', borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>🔴 Live</button>
+          )}
+        </div>
       } />
       <div style={{ padding: 20 }}>
         {/* Score */}
@@ -1147,7 +1232,7 @@ function LiveScreen({ match: initialMatch, groupId }) {
           </div>
 
           {/* Controls */}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => setRunning(r => !r)} disabled={keeperPause || elapsed >= totalSecs} style={{
               background: running ? T.warn + '33' : T.accent,
               color: running ? T.warn : '#000',
@@ -1172,6 +1257,22 @@ function LiveScreen({ match: initialMatch, groupId }) {
             }}>+6'</button>
           </div>
         </Card>
+
+        {/* Team Tabs (Mobile Only) */}
+        {!isWide && (
+          <div style={{ display: 'flex', background: T.card, borderRadius: 14, padding: 4, marginBottom: 16, border: `1px solid ${T.border}` }}>
+            <button onClick={() => setActiveTab('A')} style={{
+              flex: 1, padding: '10px', borderRadius: 10, fontWeight: 800, fontSize: 13,
+              background: activeTab === 'A' ? T.teamA : 'transparent',
+              color: activeTab === 'A' ? '#fff' : T.sub, transition: 'all .2s'
+            }}>SQUADRA A</button>
+            <button onClick={() => setActiveTab('B')} style={{
+              flex: 1, padding: '10px', borderRadius: 10, fontWeight: 800, fontSize: 13,
+              background: activeTab === 'B' ? T.teamB : 'transparent',
+              color: activeTab === 'B' ? '#fff' : T.sub, transition: 'all .2s'
+            }}>SQUADRA B</button>
+          </div>
+        )}
 
         {/* Layout Condizionale: Desktop/Tablet vs Mobile */}
         <div style={{ 
