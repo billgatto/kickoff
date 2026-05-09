@@ -449,71 +449,93 @@ function GroupDetailScreen({ groupId }) {
                   <div>Nessun giocatore. Aggiungine uno!</div>
                 </div>
               )}
-              {[...group.players].sort((a, b) => a.name.localeCompare(b.name)).map((p, i) => (
-                <Card key={p.id} style={{ position: 'relative' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <Avatar name={p.name} size={42} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 16 }}>{p.name}</div>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 2, alignItems: 'center' }}>
-                        <Pill label={p.role || 'Tuttocampista'} color={T.accent} />
-                        {p.phone && <span style={{ color: T.sub, fontSize: 11 }}>📞 {p.phone}</span>}
+              {[...group.players].sort((a, b) => a.name.localeCompare(b.name)).map((p, i) => {
+                const stats = {
+                  goals: group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.playerId === p.id).length, 0),
+                  matches: group.matches.filter(m => m.status === 'finished' && [...m.teamA, ...m.teamB].some(pl => pl.id === p.id)).length,
+                  wins: group.matches.filter(m => {
+                    if (m.status !== 'finished') return false;
+                    const inA = m.teamA.some(pl => pl.id === p.id);
+                    const inB = m.teamB.some(pl => pl.id === p.id);
+                    return (inA && m.scoreA > m.scoreB) || (inB && m.scoreB > m.scoreA);
+                  }).length
+                };
+                return (
+                  <Card key={p.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar name={p.name} size={44} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 16 }}>{p.name}</div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 2, alignItems: 'center' }}>
+                          <Pill label={p.role || 'Tuttocampista'} color={T.accent} />
+                          <span style={{ color: T.sub, fontSize: 11 }}>{stats.matches} PT · {stats.wins} V</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', display: 'flex', gap: 10 }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontWeight: 800, fontSize: 18, color: T.accent }}>{stats.goals}</div>
+                          <div style={{ color: T.sub, fontSize: 9 }}>GOL</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center' }}>
+                          <button onClick={() => { setEditingPlayer(p); setNewPlayer({ name: p.name, phone: p.phone || '', role: p.role || 'Tuttocampista' }); setShowAddPlayer(true); }} style={{ color: T.sub, fontSize: 16 }}>✎</button>
+                          <button onClick={() => deletePlayer(p.id)} style={{ color: T.danger, fontSize: 16 }}>🗑</button>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => { setEditingPlayer(p); setNewPlayer({ name: p.name, phone: p.phone || '', role: p.role || 'Tuttocampista' }); setShowAddPlayer(true); }} style={{ color: T.sub, fontSize: 18 }}>✎</button>
-                      <button onClick={() => deletePlayer(p.id)} style={{ color: T.danger, fontSize: 18 }}>🗑</button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           </>
         )}
 
         {tab === 'statistiche' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {group.players.length === 0 ? (
               <div style={{ textAlign: 'center', color: T.sub, marginTop: 30 }}>Nessun dato ancora.</div>
             ) : (
-              group.players
-                .map(p => {
-                  const playerGoals = group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.playerId === p.id).length, 0);
-                  const assists = group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.assistantId === p.id).length, 0);
-                  const matchesCount = group.matches.filter(m => m.status === 'finished' && [...m.teamA, ...m.teamB].some(pl => pl.id === p.id)).length;
-                  const winsCount = group.matches.filter(m => {
-                    if (m.status !== 'finished') return false;
-                    const inA = m.teamA.some(pl => pl.id === p.id);
-                    const inB = m.teamB.some(pl => pl.id === p.id);
-                    if (inA && m.scoreA > m.scoreB) return true;
-                    if (inB && m.scoreB > m.scoreA) return true;
-                    return false;
-                  }).length;
-                  return { ...p, calcGoals: playerGoals, calcAssists: assists, calcMatches: matchesCount, calcWins: winsCount, winRate: matchesCount ? Math.round((winsCount / matchesCount) * 100) : 0 };
-                })
-                .sort((a, b) => b.calcGoals - a.calcGoals || b.calcAssists - a.calcAssists)
-                .map((p, i) => (
-                  <Card key={p.id}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ color: T.sub, fontSize: 12, width: 18 }}>{i+1}</span>
-                      <Avatar name={p.name} size={36} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                        <div style={{ color: T.sub, fontSize: 11 }}>{p.calcMatches} PT · {p.winRate}% WIN</div>
+              <>
+                <div style={{ display: 'flex', padding: '0 12px 8px', color: T.sub, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>
+                  <span style={{ width: 28 }}>#</span>
+                  <span style={{ flex: 1 }}>Giocatore</span>
+                  <span style={{ width: 35, textAlign: 'center' }}>PT</span>
+                  <span style={{ width: 35, textAlign: 'center' }}>G</span>
+                  <span style={{ width: 35, textAlign: 'center' }}>A</span>
+                  <span style={{ width: 45, textAlign: 'right' }}>WIN%</span>
+                </div>
+                {group.players
+                  .map(p => {
+                    const playerGoals = group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.playerId === p.id).length, 0);
+                    const assists = group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.assistantId === p.id).length, 0);
+                    const matchesCount = group.matches.filter(m => m.status === 'finished' && [...m.teamA, ...m.teamB].some(pl => pl.id === p.id)).length;
+                    const winsCount = group.matches.filter(m => {
+                      if (m.status !== 'finished') return false;
+                      const inA = m.teamA.some(pl => pl.id === p.id);
+                      const inB = m.teamB.some(pl => pl.id === p.id);
+                      return (inA && m.scoreA > m.scoreB) || (inB && m.scoreB > m.scoreA);
+                    }).length;
+                    return { ...p, calcGoals: playerGoals, calcAssists: assists, calcMatches: matchesCount, calcWins: winsCount, winRate: matchesCount ? Math.round((winsCount / matchesCount) * 100) : 0 };
+                  })
+                  .sort((a, b) => b.calcGoals - a.calcGoals || b.winRate - a.winRate)
+                  .map((p, i) => (
+                    <div key={p.id} style={{ 
+                      display: 'flex', alignItems: 'center', padding: '10px 12px', 
+                      background: i % 2 === 0 ? T.card : 'transparent', borderRadius: 8,
+                      borderBottom: i === group.players.length - 1 ? 'none' : `1px solid ${T.border}30`
+                    }}>
+                      <span style={{ width: 28, color: i < 3 ? T.warn : T.sub, fontWeight: 800, fontSize: 13 }}>{i+1}</span>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar name={p.name} size={28} />
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{p.name.split(' ')[0]} {p.name.split(' ')[1]?.charAt(0)}.</span>
                       </div>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontWeight: 800, fontSize: 16, color: T.accent }}>{p.calcGoals}</div>
-                          <div style={{ color: T.sub, fontSize: 9, textTransform: 'uppercase' }}>Gol</div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontWeight: 800, fontSize: 16, color: T.warn }}>{p.calcAssists}</div>
-                          <div style={{ color: T.sub, fontSize: 9, textTransform: 'uppercase' }}>Ast</div>
-                        </div>
-                      </div>
+                      <span style={{ width: 35, textAlign: 'center', fontSize: 13, color: T.sub }}>{p.calcMatches}</span>
+                      <span style={{ width: 35, textAlign: 'center', fontSize: 14, fontWeight: 800, color: T.accent }}>{p.calcGoals}</span>
+                      <span style={{ width: 35, textAlign: 'center', fontSize: 14, fontWeight: 700, color: T.warn }}>{p.calcAssists}</span>
+                      <span style={{ width: 45, textAlign: 'right', fontSize: 12, fontWeight: 600, color: p.winRate > 50 ? T.accent : T.sub }}>{p.winRate}%</span>
                     </div>
-                  </Card>
-                ))
+                  ))
+                }
+              </>
             )}
           </div>
         )}
@@ -1146,14 +1168,15 @@ function LiveScreen({ match: initialMatch, groupId }) {
 
   const endMatch = () => {
     setRunning(false);
+    const finalMatch = { ...getMatch(), status: 'finished', goals, scoreA, scoreB };
     setData(prev => ({
       ...prev,
       groups: prev.groups.map(g => g.id === groupId ? {
         ...g,
-        matches: g.matches.map(m => m.id === initialMatch.id ? { ...m, status: 'finished', goals, scoreA, scoreB } : m)
+        matches: g.matches.map(m => m.id === initialMatch.id ? finalMatch : m)
       } : g)
     }));
-    pop();
+    push('matchResult', { match: finalMatch, groupId });
   };
 
   const remaining = totalSecs - elapsed;
@@ -1446,6 +1469,87 @@ function ShareScreen({ match }) {
   );
 }
 
+// ── MATCH RESULT SCREEN ──────────────────────────────────────────────────
+function MatchResultScreen({ match, groupId }) {
+  const { pop } = useApp();
+  const date = fmtDate(match.date);
+  
+  const scorers = {};
+  match.goals.forEach(g => { scorers[g.playerId] = (scorers[g.playerId] || 0) + 1; });
+  const assists = {};
+  match.goals.forEach(g => { if(g.assistantId) assists[g.assistantId] = (assists[g.assistantId] || 0) + 1; });
+
+  return (
+    <Screen style={{ background: '#000' }}>
+      <Header title="Risultato Finale" back />
+      <div id="result-card" style={{ padding: 24, background: 'linear-gradient(135deg, #080810 0%, #1a1a3a 100%)', minHeight: '80%', display: 'flex', flexDirection: 'column', gap: 24, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: T.accent, opacity: 0.1, borderRadius: '50%' }} />
+        
+        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+          <div style={{ color: T.accent, fontWeight: 900, fontSize: 12, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 8 }}>MATCH FINISHED</div>
+          <div style={{ fontWeight: 900, fontSize: 32, lineHeight: 1.1 }}>RISULTATO FINALE</div>
+          <div style={{ color: T.sub, fontSize: 14, marginTop: 4 }}>{date}</div>
+        </div>
+
+        {/* Score Board */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 24, padding: '30px 20px', border: `1px solid ${T.border}` }}>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ color: T.teamA, fontWeight: 900, fontSize: 12, marginBottom: 8 }}>TEAM BLUE</div>
+            <div style={{ fontWeight: 900, fontSize: 64, color: T.teamA, lineHeight: 1 }}>{match.scoreA}</div>
+          </div>
+          <div style={{ color: T.sub, fontWeight: 900, fontSize: 32 }}>:</div>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ color: T.teamB, fontWeight: 900, fontSize: 12, marginBottom: 8 }}>TEAM ORANGE</div>
+            <div style={{ fontWeight: 900, fontSize: 64, color: T.teamB, lineHeight: 1 }}>{match.scoreB}</div>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, border: `1px solid ${T.border}` }}>
+            <div style={{ color: T.accent, fontWeight: 900, fontSize: 11, marginBottom: 12, textAlign: 'center', letterSpacing: 1 }}>TOP SCORERS ⚽</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Object.entries(scorers).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([pid, count]) => {
+                const p = match.players.find(x => x.id === parseInt(pid));
+                return (
+                  <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ color: '#fff' }}>{p?.name.split(' ')[0].toUpperCase()}</span>
+                    <span style={{ color: T.accent }}>{count}</span>
+                  </div>
+                );
+              })}
+              {Object.keys(scorers).length === 0 && <div style={{ textAlign: 'center', color: T.sub, fontSize: 11 }}>Nessun gol</div>}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, border: `1px solid ${T.border}` }}>
+            <div style={{ color: T.warn, fontWeight: 900, fontSize: 11, marginBottom: 12, textAlign: 'center', letterSpacing: 1 }}>ASSISTS 👟</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Object.entries(assists).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([pid, count]) => {
+                const p = match.players.find(x => x.id === parseInt(pid));
+                return (
+                  <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ color: '#fff' }}>{p?.name.split(' ')[0].toUpperCase()}</span>
+                    <span style={{ color: T.warn }}>{count}</span>
+                  </div>
+                );
+              })}
+              {Object.keys(assists).length === 0 && <div style={{ textAlign: 'center', color: T.sub, fontSize: 11 }}>Nessun assist</div>}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 'auto', textAlign: 'center', opacity: 0.5 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>POWERED BY KICKOFF • CALCETTO PRO</div>
+        </div>
+      </div>
+      <div style={{ padding: 20 }}>
+        <div style={{ color: T.sub, fontSize: 12, textAlign: 'center', marginBottom: 16 }}>Fai uno screenshot per condividere la gloria! 🏆</div>
+        <Btn full label="Torna alla Home" onClick={() => { setStack([]); setTab('home'); }} />
+      </div>
+    </Screen>
+  );
+}
+
 // ── PROFILE SCREEN ────────────────────────────────────────────────────────
 function ProfileScreen() {
   const { data, setData } = useApp();
@@ -1614,6 +1718,7 @@ function App() {
     if (screen === 'matchDetail') return <MatchDetailScreen {...params} />;
     if (screen === 'live') return <LiveScreen {...params} />;
     if (screen === 'share') return <ShareScreen {...params} />;
+    if (screen === 'matchResult') return <MatchResultScreen {...params} />;
     return null;
   };
 
