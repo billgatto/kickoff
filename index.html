@@ -858,26 +858,73 @@ function CreateMatchScreen({ groupId, matchToEdit = null }) {
 // ── CONVOCAZIONI SCREEN ───────────────────────────────────────────────────
 function ConvocazioniScreen() {
   const { data, setData, push } = useApp();
-  const respond = (id, status) => {
-    setData(prev => ({
-      ...prev,
-      convocazioni: prev.convocazioni.map(c => c.id === id ? { ...c, status } : c)
-    }));
+
+  const invitations = useMemo(() => {
+    const list = [];
+    // Aggreghiamo tutte le partite imminenti da tutti i gruppi
+    data.groups.forEach(g => {
+      g.matches.forEach(m => {
+        if (m.status === 'upcoming' || m.status === 'live') {
+          // Se l'utente è un giocatore specifico, mostriamo solo le sue
+          const myPlayer = data.user.id !== 'admin' ? m.players.find(p => p.id === data.user.id) : null;
+          
+          if (data.user.id === 'admin' || myPlayer) {
+            list.push({
+              id: m.id,
+              groupId: g.id,
+              groupName: g.name,
+              date: m.date,
+              time: m.time,
+              location: m.location,
+              status: myPlayer ? (myPlayer.presence === 'present' ? 'accepted' : (myPlayer.presence === 'absent' ? 'declined' : 'pending')) : 'pending',
+              match: m
+            });
+          }
+        }
+      });
+    });
+    // Aggiungiamo eventuali convocazioni manuali (legacy)
+    return [...list, ...data.convocazioni];
+  }, [data]);
+
+  const respond = (invitation, status) => {
+    if (data.user.id !== 'admin' && invitation.groupId) {
+      setData(prev => ({
+        ...prev,
+        groups: prev.groups.map(g => g.id === invitation.groupId ? {
+          ...g,
+          matches: g.matches.map(m => m.id === invitation.id ? {
+            ...m,
+            players: m.players.map(p => p.id === data.user.id ? { ...p, presence: status === 'accepted' ? 'present' : 'absent' } : p)
+          } : m)
+        } : g)
+      }));
+    } else {
+      setData(prev => ({
+        ...prev,
+        convocazioni: prev.convocazioni.map(c => c.id === invitation.id ? { ...c, status } : c)
+      }));
+    }
   };
 
   return (
     <Screen>
       <div style={{ padding: '56px 20px 20px' }}>
         <div style={{ fontWeight: 800, fontSize: 24, marginBottom: 24 }}>Convocazioni</div>
-        {data.convocazioni.length === 0 && (
+        {invitations.length === 0 && (
           <div style={{ textAlign: 'center', color: T.sub, marginTop: 60 }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
             <div>Nessuna convocazione</div>
+            <div style={{ fontSize: 13, color: T.muted, marginTop: 8 }}>
+              {data.user.id === 'admin' 
+                ? "Crea una partita per vederla qui." 
+                : "Non sei stato ancora convocato per nessuna partita."}
+            </div>
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {data.convocazioni.map(c => (
-            <Card key={c.id} style={{ border: `1px solid ${c.status === 'accepted' ? T.accent : c.status === 'declined' ? T.danger : T.border}40` }}>
+          {invitations.map(c => (
+            <Card key={c.id} onClick={() => push('matchDetail', { match: c.match, groupId: c.groupId })} style={{ border: `1px solid ${c.status === 'accepted' ? T.accent : c.status === 'declined' ? T.danger : T.border}40` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 16 }}>{c.groupName}</div>
@@ -885,13 +932,18 @@ function ConvocazioniScreen() {
                   <div style={{ color: T.sub, fontSize: 13 }}>📍 {c.location}</div>
                 </div>
                 {c.status !== 'pending' && (
-                  <Pill label={c.status === 'accepted' ? '✓ Presente' : '✗ Assente'} color={c.status === 'accepted' ? T.accent : T.danger} />
+                  <Pill label={c.status === 'accepted' ? '✓ Accettata' : '✗ Rifiutata'} color={c.status === 'accepted' ? T.accent : T.danger} />
                 )}
               </div>
-              {c.status === 'pending' && (
+              {data.user.id !== 'admin' && c.status === 'pending' && (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <Btn small full label="✓ Presente" onClick={() => respond(c.id, 'accepted')} />
-                  <Btn small full secondary danger label="✗ Assente" onClick={() => respond(c.id, 'declined')} />
+                  <Btn small full label="✓ Accetta" onClick={(e) => { e.stopPropagation(); respond(c, 'accepted'); }} />
+                  <Btn small full secondary danger label="✗ Rifiuta" onClick={(e) => { e.stopPropagation(); respond(c, 'declined'); }} />
+                </div>
+              )}
+              {data.user.id === 'admin' && (
+                <div style={{ fontSize: 11, color: T.sub, borderTop: `1px solid ${T.border}`, paddingTop: 8, marginTop: 8 }}>
+                  Visualizzazione Amministratore
                 </div>
               )}
             </Card>
