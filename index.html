@@ -1594,7 +1594,7 @@ function ProfileScreen() {
             <div style={{ fontWeight: 800, fontSize: 22, marginTop: 12 }}>{data.user.name}</div>
           )}
           
-          <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => setData(prev => ({ ...prev, user: { ...prev.user, role: prev.user.role === 'admin' ? 'player' : 'admin' } }))}
               style={{
                 background: data.user.role === 'admin' ? T.accentDim : T.card,
@@ -1604,6 +1604,34 @@ function ProfileScreen() {
               }}>
               {data.user.role === 'admin' ? '⚙️ Admin' : '👤 Giocatore'}
             </button>
+            
+            <select 
+              value={data.user.id === 'admin' ? '' : data.user.id}
+              onChange={(e) => {
+                const pid = e.target.value;
+                if (!pid) {
+                  setData(prev => ({ ...prev, user: { ...prev.user, id: 'admin' } }));
+                  return;
+                }
+                const player = data.groups.flatMap(g => g.players).find(p => String(p.id) === pid);
+                if (player) {
+                  setData(prev => ({ ...prev, user: { ...prev.user, id: player.id, name: player.name } }));
+                }
+              }}
+              style={{
+                background: data.user.id !== 'admin' ? T.accentDim : T.card,
+                color: data.user.id !== 'admin' ? T.accent : T.sub,
+                border: `1px solid ${data.user.id !== 'admin' ? T.accent : T.border}`,
+                borderRadius: 20, padding: '6px 16px', fontWeight: 700, fontSize: 13,
+                outline: 'none', maxWidth: 160, appearance: 'none', textAlign: 'center'
+              }}
+            >
+              <option value="">🔗 Associa Giocatore</option>
+              {Array.from(new Map(data.groups.flatMap(g => g.players).map(p => [p.id, p])).values()).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
             <button onClick={() => {
               if(confirm("Sei sicuro? Questo cancellerà TUTTI i dati dell'app (gruppi, partite, giocatori) e non potrai tornare indietro.")) {
                 localStorage.removeItem('kickoff_data');
