@@ -98,50 +98,12 @@ const shuffle = a => [...a].sort(() => Math.random() - 0.5);
 const fmtDate = d => { const dt = new Date(d); return dt.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }); };
 
 // ── DATA ───────────────────────────────────────────────────────────────────
-const PLAYERS_POOL = [
-  { id: 1, name: 'Marco Rossi',       goals: 23, matches: 41, wins: 28 },
-  { id: 2, name: 'Luca Bianchi',      goals: 15, matches: 38, wins: 22 },
-  { id: 3, name: 'Andrea Ferrari',    goals: 31, matches: 40, wins: 26 },
-  { id: 4, name: 'Paolo Russo',       goals: 8,  matches: 35, wins: 18 },
-  { id: 5, name: 'Matteo Romano',     goals: 19, matches: 39, wins: 24 },
-  { id: 6, name: 'Davide Esposito',   goals: 12, matches: 37, wins: 20 },
-  { id: 7, name: 'Gianni Colombo',    goals: 5,  matches: 32, wins: 15 },
-  { id: 8, name: 'Stefano Ricci',     goals: 27, matches: 40, wins: 25 },
-  { id: 9, name: 'Roberto Marino',    goals: 9,  matches: 33, wins: 17 },
-  { id: 10, name: 'Franco Greco',     goals: 14, matches: 36, wins: 21 },
-  { id: 11, name: 'Carlo Bruno',      goals: 11, matches: 34, wins: 19 },
-  { id: 12, name: 'Antonio Serra',    goals: 7,  matches: 30, wins: 14 },
-];
+const PLAYERS_POOL = [];
 
 const INIT_DATA = {
-  user: { id: 1, name: 'Marco Rossi', role: 'admin' },
-  groups: [{
-    id: 1, name: 'I Soliti Noti', emoji: '⚽',
-    players: PLAYERS_POOL,
-    matches: [
-      {
-        id: 1, date: '2026-04-26', time: '21:00', location: 'Centro Sportivo Aurora',
-        duration: 60, status: 'upcoming',
-        players: PLAYERS_POOL.map(p => ({ ...p, presence: p.id <= 10 ? 'present' : 'absent' })),
-        teamA: [], teamB: [], goals: [], scoreA: 0, scoreB: 0,
-      },
-      {
-        id: 2, date: '2026-04-19', time: '21:00', location: 'Centro Sportivo Aurora',
-        duration: 60, status: 'finished',
-        players: PLAYERS_POOL.map(p => ({ ...p, presence: 'present' })),
-        teamA: PLAYERS_POOL.slice(0, 5), teamB: PLAYERS_POOL.slice(5, 10),
-        goals: [
-          { playerId: 3, team: 'A', minute: 8 }, { playerId: 8, team: 'B', minute: 15 },
-          { playerId: 3, team: 'A', minute: 22 }, { playerId: 1, team: 'A', minute: 35 },
-          { playerId: 5, team: 'B', minute: 48 }, { playerId: 3, team: 'A', minute: 55 },
-        ],
-        scoreA: 4, scoreB: 2,
-      },
-    ]
-  }],
-  convocazioni: [
-    { id: 1, groupId: 1, groupName: 'I Soliti Noti', matchId: 1, date: '2026-04-26', time: '21:00', location: 'Centro Sportivo Aurora', status: 'pending' },
-  ],
+  user: { id: 'admin', name: 'Amministratore', role: 'admin' },
+  groups: [],
+  convocazioni: [],
 };
 
 // ── CONTEXT ────────────────────────────────────────────────────────────────
@@ -232,9 +194,9 @@ function HomeScreen() {
         {/* Stats strip */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 28 }}>
           {[
-            { label: 'Partite', val: PLAYERS_POOL[0].matches },
-            { label: 'Gol', val: PLAYERS_POOL[0].goals },
-            { label: 'Vittorie', val: PLAYERS_POOL[0].wins },
+            { label: 'Partite', val: 0 },
+            { label: 'Gol', val: 0 },
+            { label: 'Vittorie', val: 0 },
           ].map(s => (
             <Card key={s.label} style={{ textAlign: 'center', padding: '12px 8px' }}>
               <div style={{ fontWeight: 800, fontSize: 24, color: T.accent }}>{s.val}</div>
@@ -403,12 +365,12 @@ function GroupDetailScreen({ groupId }) {
       <div style={{ padding: 20 }}>
         {/* Tabs */}
         <div style={{ display: 'flex', background: T.card, borderRadius: 12, padding: 4, marginBottom: 20 }}>
-          {['partite', 'giocatori'].map(t => (
+          {['partite', 'giocatori', 'statistiche'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '8px 0', borderRadius: 10, fontWeight: 700, fontSize: 13,
               background: tab === t ? T.accent : 'transparent',
               color: tab === t ? '#000' : T.sub, transition: 'all .2s',
-            }}>{t === 'partite' ? 'Partite' : 'Giocatori'}</button>
+            }}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
           ))}
         </div>
 
@@ -482,6 +444,53 @@ function GroupDetailScreen({ groupId }) {
               ))}
             </div>
           </>
+        )}
+
+        {tab === 'statistiche' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {group.players.length === 0 ? (
+              <div style={{ textAlign: 'center', color: T.sub, marginTop: 30 }}>Nessun dato ancora.</div>
+            ) : (
+              group.players
+                .map(p => {
+                  const playerGoals = group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.playerId === p.id).length, 0);
+                  const assists = group.matches.reduce((sum, m) => sum + m.goals.filter(g => g.assistantId === p.id).length, 0);
+                  const matchesCount = group.matches.filter(m => m.status === 'finished' && [...m.teamA, ...m.teamB].some(pl => pl.id === p.id)).length;
+                  const winsCount = group.matches.filter(m => {
+                    if (m.status !== 'finished') return false;
+                    const inA = m.teamA.some(pl => pl.id === p.id);
+                    const inB = m.teamB.some(pl => pl.id === p.id);
+                    if (inA && m.scoreA > m.scoreB) return true;
+                    if (inB && m.scoreB > m.scoreA) return true;
+                    return false;
+                  }).length;
+                  return { ...p, calcGoals: playerGoals, calcAssists: assists, calcMatches: matchesCount, calcWins: winsCount, winRate: matchesCount ? Math.round((winsCount / matchesCount) * 100) : 0 };
+                })
+                .sort((a, b) => b.calcGoals - a.calcGoals || b.calcAssists - a.calcAssists)
+                .map((p, i) => (
+                  <Card key={p.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ color: T.sub, fontSize: 12, width: 18 }}>{i+1}</span>
+                      <Avatar name={p.name} size={36} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                        <div style={{ color: T.sub, fontSize: 11 }}>{p.calcMatches} PT · {p.winRate}% WIN</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontWeight: 800, fontSize: 16, color: T.accent }}>{p.calcGoals}</div>
+                          <div style={{ color: T.sub, fontSize: 9, textTransform: 'uppercase' }}>Gol</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontWeight: 800, fontSize: 16, color: T.warn }}>{p.calcAssists}</div>
+                          <div style={{ color: T.sub, fontSize: 9, textTransform: 'uppercase' }}>Ast</div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+            )}
+          </div>
         )}
       </div>
 
@@ -727,6 +736,14 @@ function CreateMatchScreen({ groupId }) {
               <Btn full secondary label="← Indietro" onClick={() => setStep(2)} />
               <Btn full label="Salva Partita ✓" onClick={save} />
             </div>
+            {step === 3 && (
+              <div style={{ marginTop: 12 }}>
+                <Btn full secondary label="📢 Condividi Convocazioni" icon="📤" onClick={() => {
+                  const match = { ...info, teamA, teamB, groupName: group.name };
+                  push('share', { match });
+                }} />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -795,10 +812,11 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
 
   return (
     <Screen>
-      <Header title="Dettagli Partita" back action={
-        match.status !== 'finished' && match.teamA.length > 0
-          ? <button onClick={() => push('live', { match, groupId })} style={{ background: T.danger, color: '#fff', borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>🔴 Live</button>
-          : null
+          ? <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => push('share', { match: { ...match, groupName: data.groups.find(g => g.id === groupId)?.name || 'Match' } })} style={{ background: T.border, color: T.text, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>📤</button>
+                <button onClick={() => push('live', { match, groupId })} style={{ background: T.danger, color: '#fff', borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>🔴 Live</button>
+              </div>
+          : <button onClick={() => push('share', { match: { ...match, groupName: data.groups.find(g => g.id === groupId)?.name || 'Match' } })} style={{ background: T.border, color: T.text, borderRadius: 20, padding: '6px 14px', fontWeight: 700, fontSize: 13 }}>📤 Condividi</button>
       } />
       <div style={{ padding: 20 }}>
         {/* Score */}
@@ -829,7 +847,12 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < match.goals.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                     <span style={{ color: T.sub, fontSize: 12, width: 28 }}>{g.minute}'</span>
                     <span style={{ color: g.team === 'A' ? T.teamA : T.teamB, fontSize: 16 }}>⚽</span>
-                    <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{p?.name || 'Sconosciuto'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{p?.name || 'Sconosciuto'}</div>
+                      {g.assistantId && (
+                        <div style={{ fontSize: 11, color: T.sub }}>Ast: {match.players.find(pl => pl.id === g.assistantId)?.name.split(' ')[0]}</div>
+                      )}
+                    </div>
                     <Pill label={`Sqd ${g.team}`} color={g.team === 'A' ? T.teamA : T.teamB} />
                   </div>
                 );
@@ -905,6 +928,8 @@ function LiveScreen({ match: initialMatch, groupId }) {
   const [scoreB, setScoreB] = useState(initialMatch.scoreB || 0);
   const [lastGoal, setLastGoal] = useState(null);
   const [activeTab, setActiveTab] = useState('A');
+  const [selectingAssist, setSelectingAssist] = useState(null); // { player, team }
+  const [editingGoal, setEditingGoal] = useState(null); // goal index
 
   const KEEPER_INTERVAL = 360; // 6 min
   const prevKeeperRef = useRef(0);
@@ -956,13 +981,16 @@ function LiveScreen({ match: initialMatch, groupId }) {
     return () => clearInterval(keeperTimerRef.current);
   }, [keeperPause]);
 
-  const addGoal = (player, team) => {
+  const addGoal = (player, team, assistantId = null) => {
     const minute = Math.floor(elapsed / 60);
-    const goal = { playerId: player.id, team, minute };
+    const goal = { id: Date.now(), playerId: player.id, team, minute, assistantId };
     const newGoals = [...goals, goal];
     setGoals(newGoals);
-    if (team === 'A') setScoreA(s => s + 1);
-    else setScoreB(s => s + 1);
+    
+    let newScoreA = scoreA, newScoreB = scoreB;
+    if (team === 'A') { setScoreA(s => s + 1); newScoreA++; }
+    else { setScoreB(s => s + 1); newScoreB++; }
+    
     setLastGoal({ name: player.name, team, minute });
     playGoalSound();
     setTimeout(() => setLastGoal(null), 3000);
@@ -974,11 +1002,33 @@ function LiveScreen({ match: initialMatch, groupId }) {
         ...g,
         matches: g.matches.map(m => m.id === initialMatch.id ? {
           ...m, goals: newGoals,
-          scoreA: team === 'A' ? (m.scoreA || 0) + 1 : (m.scoreA || 0),
-          scoreB: team === 'B' ? (m.scoreB || 0) + 1 : (m.scoreB || 0),
+          scoreA: newScoreA, scoreB: newScoreB,
         } : m)
       } : g)
     }));
+    setSelectingAssist(null);
+  };
+
+  const removeGoal = (index) => {
+    const goalToRemove = goals[index];
+    const newGoals = goals.filter((_, i) => i !== index);
+    setGoals(newGoals);
+    
+    let newScoreA = scoreA, newScoreB = scoreB;
+    if (goalToRemove.team === 'A') { setScoreA(s => Math.max(0, s - 1)); newScoreA--; }
+    else { setScoreB(s => Math.max(0, s - 1)); newScoreB--; }
+
+    setData(prev => ({
+      ...prev,
+      groups: prev.groups.map(g => g.id === groupId ? {
+        ...g,
+        matches: g.matches.map(m => m.id === initialMatch.id ? {
+          ...m, goals: newGoals,
+          scoreA: Math.max(0, newScoreA), scoreB: Math.max(0, newScoreB),
+        } : m)
+      } : g)
+    }));
+    setEditingGoal(null);
   };
 
   const undoGoal = () => {
@@ -1130,7 +1180,7 @@ function LiveScreen({ match: initialMatch, groupId }) {
         {/* Players list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {(activeTab === 'A' ? teamAPlayers : teamBPlayers).map(p => (
-            <button key={p.id} onClick={() => addGoal(p, activeTab)} style={{
+            <button key={p.id} onClick={() => setSelectingAssist({ player: p, team: activeTab })} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
               borderRadius: 14, background: T.card, border: `1px solid ${T.border}`,
               textAlign: 'left', width: '100%', cursor: 'pointer',
@@ -1159,19 +1209,114 @@ function LiveScreen({ match: initialMatch, groupId }) {
         {goals.length > 0 && (
           <div style={{ marginTop: 20 }}>
             <div style={{ fontWeight: 700, fontSize: 12, color: T.sub, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Gol Recenti</div>
-            {[...goals].reverse().slice(0, 5).map((g, i) => {
+            {[...goals].reverse().map((g, i) => {
+              const idx = goals.length - 1 - i;
               const p = [...teamAPlayers, ...teamBPlayers].find(pl => pl.id === g.playerId);
+              const ast = [...teamAPlayers, ...teamBPlayers].find(pl => pl.id === g.assistantId);
               return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
+                <div key={idx} onClick={() => setEditingGoal(idx)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${T.border}`, cursor: 'pointer' }}>
                   <span style={{ color: T.sub, fontSize: 12, width: 28 }}>{g.minute}'</span>
                   <span style={{ fontSize: 14 }}>⚽</span>
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p?.name}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{p?.name}</div>
+                    {ast && <div style={{ fontSize: 10, color: T.sub }}>Assist: {ast.name.split(' ')[0]}</div>}
+                  </div>
                   <Pill label={`Sqd ${g.team}`} color={g.team === 'A' ? T.teamA : T.teamB} />
+                  <span style={{ color: T.sub, fontSize: 14 }}>✎</span>
                 </div>
               );
             })}
           </div>
         )}
+
+        {/* Assist Overlay */}
+        {selectingAssist && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,.9)', display: 'flex', alignItems: 'flex-end' }}>
+            <div style={{ background: T.surf, width: '100%', borderRadius: '24px 24px 0 0', padding: 24, maxHeight: '80%', overflowY: 'auto' }}>
+              <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 4, color: T.accent }}>GOL DI {selectingAssist.player.name.toUpperCase()}! ⚽</div>
+              <div style={{ color: T.sub, fontSize: 14, marginBottom: 20 }}>Chi ha fatto l'assist?</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                {(selectingAssist.team === 'A' ? teamAPlayers : teamBPlayers)
+                  .filter(p => p.id !== selectingAssist.player.id)
+                  .map(p => (
+                    <button key={p.id} onClick={() => addGoal(selectingAssist.player, selectingAssist.team, p.id)} style={{
+                      background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: 12, textAlign: 'center'
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{p.name.split(' ')[0]}</div>
+                    </button>
+                  ))}
+                <button onClick={() => addGoal(selectingAssist.player, selectingAssist.team, null)} style={{
+                  background: T.border, borderRadius: 12, padding: 12, textAlign: 'center', gridColumn: 'span 2'
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Nessun Assist</div>
+                </button>
+              </div>
+              <Btn full secondary label="Annulla Gol" danger onClick={() => setSelectingAssist(null)} />
+            </div>
+          </div>
+        )}
+
+        {/* Edit Goal Overlay */}
+        {editingGoal !== null && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <Card style={{ width: '100%', maxWidth: 320 }}>
+              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 20, textAlign: 'center' }}>Modifica Gol</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Btn full danger label="Elimina Gol 🗑" onClick={() => removeGoal(editingGoal)} />
+                <Btn full secondary label="Chiudi" onClick={() => setEditingGoal(null)} />
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </Screen>
+  );
+}
+
+// ── SHARE SCREEN ──────────────────────────────────────────────────────────
+function ShareScreen({ match }) {
+  const { pop } = useApp();
+  const date = match.date ? fmtDate(match.date) : 'Oggi';
+  
+  return (
+    <Screen style={{ background: '#000' }}>
+      <Header title="Condividi Partita" back />
+      <div id="share-card" style={{ padding: 24, background: 'linear-gradient(135deg, #080810 0%, #16162a 100%)', minHeight: '80%', display: 'flex', flexDirection: 'column', gap: 32, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: T.accent, opacity: 0.05, borderRadius: '50%' }} />
+        
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ color: T.accent, fontWeight: 900, fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>{match.groupName}</div>
+          <div style={{ fontWeight: 900, fontSize: 32, lineHeight: 1.1, marginBottom: 8 }}>CONVOCAZIONI<br/>MATCH</div>
+          <div style={{ color: T.sub, fontSize: 15 }}>{date} • {match.time}</div>
+          <div style={{ color: T.accent, fontSize: 14, marginTop: 4 }}>📍 {match.location}</div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: `1px solid ${T.teamA}40`, borderRadius: 20, padding: 16 }}>
+            <div style={{ color: T.teamA, fontWeight: 900, fontSize: 12, marginBottom: 16, textAlign: 'center', letterSpacing: 1 }}>TEAM BLUE</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {match.teamA.map(p => (
+                <div key={p.id} style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{p.name.toUpperCase()}</div>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: 'rgba(249, 115, 22, 0.1)', border: `1px solid ${T.teamB}40`, borderRadius: 20, padding: 16 }}>
+            <div style={{ color: T.teamB, fontWeight: 900, fontSize: 12, marginBottom: 16, textAlign: 'center', letterSpacing: 1 }}>TEAM ORANGE</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {match.teamB.map(p => (
+                <div key={p.id} style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{p.name.toUpperCase()}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 'auto', textAlign: 'center', opacity: 0.5 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>POWERED BY KICKOFF</div>
+        </div>
+      </div>
+      <div style={{ padding: 20 }}>
+        <div style={{ color: T.sub, fontSize: 12, textAlign: 'center', marginBottom: 16 }}>Fai uno screenshot di questa pagina per condividerla!</div>
+        <Btn full label="Torna Indietro" onClick={pop} />
       </div>
     </Screen>
   );
@@ -1180,15 +1325,47 @@ function LiveScreen({ match: initialMatch, groupId }) {
 // ── PROFILE SCREEN ────────────────────────────────────────────────────────
 function ProfileScreen() {
   const { data, setData } = useApp();
-  const p = PLAYERS_POOL[0];
-  const allGoals = data.groups.flatMap(g => g.matches.flatMap(m => m.goals.filter(g => g.playerId === 1)));
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempName, setTempName] = useState(data.user.name);
+
+  const allGoals = data.groups.flatMap(g => g.matches.flatMap(m => m.goals.filter(goal => goal.playerId === data.user.id)));
+  const matchesCount = data.groups.flatMap(g => g.matches.filter(m => m.status === 'finished' && [...m.teamA, ...m.teamB].some(p => p.id === data.user.id))).length;
+  const winsCount = data.groups.flatMap(g => g.matches.filter(m => {
+    if (m.status !== 'finished') return false;
+    const inA = m.teamA.some(p => p.id === data.user.id);
+    const inB = m.teamB.some(p => p.id === data.user.id);
+    return (inA && m.scoreA > m.scoreB) || (inB && m.scoreB > m.scoreA);
+  })).length;
+
+  const saveName = () => {
+    if (!tempName.trim()) return;
+    setData(prev => ({ ...prev, user: { ...prev.user, name: tempName.trim() } }));
+    setIsEditing(false);
+  };
 
   return (
     <Screen>
       <div style={{ padding: '56px 20px 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <Avatar name={data.user.name} size={72} />
-          <div style={{ fontWeight: 800, fontSize: 22, marginTop: 12 }}>{data.user.name}</div>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <Avatar name={data.user.name} size={72} />
+            <button onClick={() => setIsEditing(true)} style={{ position: 'absolute', bottom: 0, right: 0, background: T.accent, borderRadius: '50%', width: 24, height: 24, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', border: `2px solid ${T.bg}` }}>✎</button>
+          </div>
+
+          {isEditing ? (
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <input 
+                value={tempName} 
+                onChange={e => setTempName(e.target.value)}
+                autoFocus
+                style={{ background: T.card, border: `1px solid ${T.accent}`, borderRadius: 8, padding: '4px 12px', color: '#fff', fontSize: 16, outline: 'none' }}
+              />
+              <button onClick={saveName} style={{ background: T.accent, color: '#000', borderRadius: 8, padding: '4px 12px', fontWeight: 700 }}>OK</button>
+            </div>
+          ) : (
+            <div style={{ fontWeight: 800, fontSize: 22, marginTop: 12 }}>{data.user.name}</div>
+          )}
+          
           <div style={{ marginTop: 8 }}>
             <button onClick={() => setData(prev => ({ ...prev, user: { ...prev.user, role: prev.user.role === 'admin' ? 'player' : 'admin' } }))}
               style={{
@@ -1205,10 +1382,10 @@ function ProfileScreen() {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
           {[
-            { label: 'Partite giocate', val: p.matches, icon: '🏟' },
-            { label: 'Gol segnati', val: p.goals, icon: '⚽' },
-            { label: 'Vittorie', val: p.wins, icon: '🏆' },
-            { label: 'Gol oggi', val: allGoals.length, icon: '🔥' },
+            { label: 'Partite giocate', val: matchesCount, icon: '🏟' },
+            { label: 'Gol segnati', val: allGoals.length, icon: '⚽' },
+            { label: 'Vittorie', val: winsCount, icon: '🏆' },
+            { label: 'Win Rate', val: matchesCount ? Math.round((winsCount / matchesCount) * 100) + '%' : '-', icon: '📈' },
           ].map(s => (
             <Card key={s.label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
@@ -1304,6 +1481,7 @@ function App() {
     if (screen === 'createMatch') return <CreateMatchScreen {...params} />;
     if (screen === 'matchDetail') return <MatchDetailScreen {...params} />;
     if (screen === 'live') return <LiveScreen {...params} />;
+    if (screen === 'share') return <ShareScreen {...params} />;
     return null;
   };
 
