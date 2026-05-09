@@ -892,6 +892,7 @@ function MatchDetailScreen({ match: initialMatch, groupId }) {
   match.goals.forEach(g => { scorers[g.playerId] = (scorers[g.playerId] || 0) + 1; });
 
   return (
+    <Screen>
       <Header title="Dettaglio Partita" back action={
         <div style={{ display: 'flex', gap: 8 }}>
           {match.status !== 'finished' && (
